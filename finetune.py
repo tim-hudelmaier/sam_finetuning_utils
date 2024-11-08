@@ -215,10 +215,10 @@ def main(
 
     config = SAMFinetuneConfig(
         batch_size=1,
-        patch_shape=(256, 256),
+        patch_shape=(300, 300),
         train_instance_segmentation=True,
         n_samples=100,
-        n_objects_per_batch=10,
+        n_objects_per_batch=5,
         n_epochs=100,
         model_type="vit_b",
         checkpoint_name="vit_b_finetune",
