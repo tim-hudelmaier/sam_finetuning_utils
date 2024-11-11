@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import itertools
+import json
 from natsort import natsorted
 from pathlib import Path
 import random
@@ -9,6 +10,7 @@ from bioio import BioImage
 import einops
 import fire
 import imageio.v3 as imageio
+from loguru import logger
 import numpy as np
 import torch
 
@@ -88,7 +90,7 @@ def preprocess_img_data(
     train_imgs = []
 
     for img_file, label_file in zip(img_files, label_files):
-        print(f"Processing {img_file} and {label_file}")
+        logger.info(f"Processing {img_file} and {label_file}")
 
         # load label and image data
         label_reader = BioImage(label_file)
@@ -127,6 +129,7 @@ def preprocess_img_data(
         )
 
     # save images
+    logger.info("Saving images")
     for i, (img, label) in enumerate(train_imgs):
         img = einops.rearrange(img, "C Z Y X -> Y X C Z")
         label = einops.rearrange(label, "C Z Y X -> Y X C Z")
@@ -161,6 +164,14 @@ class SAMFinetuneConfig:
     model_type: str
     checkpoint_name: str
 
+    @classmethod
+    def from_json(cls, json_path: str | Path):
+        with open(json_path, "r") as f:
+            config = json.load(f)
+        if config.get("patch_shape") is not None:
+            config["patch_shape"] = tuple(config["patch_shape"])
+        return cls(**config)
+
 
 def prep_data_loaders(
     train_image_paths: List[str],
@@ -169,6 +180,7 @@ def prep_data_loaders(
     val_label_paths: List[str],
     config: SAMFinetuneConfig,
 ) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+    logger.info("Preparing data loaders")
     train_loader = sam_training.default_sam_loader(
         raw_paths=train_image_paths,
         raw_key=None,
@@ -202,27 +214,21 @@ def prep_data_loaders(
 
 
 def main(
+    config_path: str | Path,
     img_dir: str | Path,
     label_dir: str | Path,
     output_dir: str | Path,
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    logger.info(f"Using device: {device}")
+
     channels_of_interest = [
         "WGA_CF770_Gating",
         "VIMENTIN_ATTO_490LS_Gating",
         "alphaTUBULIN_ATTO_425_Gating",
     ]
 
-    config = SAMFinetuneConfig(
-        batch_size=1,
-        patch_shape=(300, 300),
-        train_instance_segmentation=True,
-        n_samples=100,
-        n_objects_per_batch=5,
-        n_epochs=100,
-        model_type="vit_b",
-        checkpoint_name="vit_b_finetune",
-    )
+    config = SAMFinetuneConfig.from_json(config_path)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
@@ -239,6 +245,7 @@ def main(
         train_image_paths, train_label_paths, val_image_paths, val_label_paths, config
     )
 
+    logger.info("Starting training")
     sam_training.train_sam(
         name=config.checkpoint_name,
         save_root=Path(output_dir) / "models",
