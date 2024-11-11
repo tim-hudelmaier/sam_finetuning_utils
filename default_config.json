@@ -6,5 +6,10 @@
   "n_objects_per_batch": 5,
   "n_epochs": 10,
   "model_type": "vit_b",
-  "checkpoint_name": "vit_b_test_run"
+  "checkpoint_name": "vit_b_test_run",
+  "channels_of_interest": [
+    "WGA_CF770_Gating",
+    "VIMENTIN_ATTO_490LS_Gating",
+    "alphaTUBULIN_ATTO_425_Gating"
+  ]
 }

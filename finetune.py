@@ -163,6 +163,7 @@ class SAMFinetuneConfig:
     n_epochs: int
     model_type: str
     checkpoint_name: str
+    channels_of_interest: list[str]
 
     @classmethod
     def from_json(cls, json_path: str | Path):
@@ -222,12 +223,6 @@ def main(
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info(f"Using device: {device}")
 
-    channels_of_interest = [
-        "WGA_CF770_Gating",
-        "VIMENTIN_ATTO_490LS_Gating",
-        "alphaTUBULIN_ATTO_425_Gating",
-    ]
-
     config = SAMFinetuneConfig.from_json(config_path)
 
     output_dir = Path(output_dir)
@@ -238,7 +233,7 @@ def main(
             img_dir,
             label_dir,
             output_dir,
-            channels_of_interest,
+            config.channels_of_interest,
         )
     )
     train_loader, val_loader = prep_data_loaders(
