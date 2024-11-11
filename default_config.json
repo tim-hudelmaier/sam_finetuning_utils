@@ -1,0 +1,10 @@
+{
+  "batch_size": 1,
+  "patch_shape": [300, 300],
+  "train_instance_segmentation": true,
+  "n_samples": 100,
+  "n_objects_per_batch": 5,
+  "n_epochs": 10,
+  "model_type": "vit_b",
+  "checkpoint_name": "vit_b_test_run"
+}
