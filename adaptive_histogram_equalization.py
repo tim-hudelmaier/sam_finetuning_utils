@@ -6,6 +6,8 @@ import numpy as np
 from skimage import exposure
 from tqdm import tqdm
 
+from open_napari import open_napari
+
 
 def apply_clahe(image: np.ndarray, clip_limit: float = 0.9) -> np.ndarray:
     """Apply CLAHE to the image."""
@@ -19,7 +21,10 @@ def apply_clahe(image: np.ndarray, clip_limit: float = 0.9) -> np.ndarray:
         img = einops.rearrange(image[channel], "Z Y X -> X Y Z")
 
         # Rescale image data to range [0, 1]
-        img = np.clip(img, np.percentile(img, 5), np.percentile(img, 95))
+        # leave lower nitensities in to remain sensitive, remove high intensities for better contrast
+        # testing absolute photon count to remove backgound noise
+        clip_boundaries = (5, np.percentile(img, 70))
+        img = np.clip(img, *clip_boundaries)
         img = (img - img.min()) / (img.max() - img.min())
 
         # Run CLAHE
@@ -29,8 +34,9 @@ def apply_clahe(image: np.ndarray, clip_limit: float = 0.9) -> np.ndarray:
     return out_img
 
 
-def main(img: str | np.ndarray, out_path: str | None):
+def main(img: str | np.ndarray, out_path: str | None, show: bool = False):
     """Load img, if needed and apply CLAHE and optionally save to out_path."""
+    # load img
     if isinstance(img, str):
         if img.endswith(".tiff") or img.endswith(".tif"):
             img_reader = BioImage(img)
@@ -43,9 +49,11 @@ def main(img: str | np.ndarray, out_path: str | None):
         else:
             raise ValueError("Image should be a path to a .tiff file")
 
+    # apply CLAHE
     if isinstance(img, np.ndarray):
         out_img = apply_clahe(img)
 
+    # save img
     if out_path is not None:
         logger.info(f"Saving CLAHE image to {out_path}")
         if out_path.endswith(".tif") or out_path.endswith(".tiff"):
@@ -55,6 +63,11 @@ def main(img: str | np.ndarray, out_path: str | None):
             np.save(out_path, out_img)
     else:
         return out_img
+
+    # open img in napari
+    if show:
+        logger.info("Opening image in Napari")
+        open_napari(img_path=out_path)
 
 
 if __name__ == "__main__":
