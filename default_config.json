@@ -11,5 +11,6 @@
     "WGA_CF770_Gating",
     "VIMENTIN_ATTO_490LS_Gating",
     "alphaTUBULIN_ATTO_425_Gating"
-  ]
+  ],
+  "clahe": true
 }

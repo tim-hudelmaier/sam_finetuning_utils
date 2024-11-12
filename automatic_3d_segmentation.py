@@ -9,6 +9,7 @@ from micro_sam.multi_dimensional_segmentation import automatic_3d_segmentation
 from micro_sam.training.util import normalize_to_8bit
 
 from finetune import subset_img_to_channels
+from adaptive_histogram_equalization import apply_clahe
 
 
 def run_automatic_3d_segmentation(
@@ -56,6 +57,7 @@ def main(
     model_type: str,
     output_path: str,
     channels_path: str,
+    clahe: bool = False,
 ):
     """Loads an image and runs automatic 3D segmentation on it.
     The segmentation results is saved as a TIFF file.
@@ -73,6 +75,10 @@ def main(
         channels_of_interest = f.read().splitlines()
 
     img = subset_img_to_channels(img, img_reader, channels_of_interest)
+
+    if clahe:
+        img = apply_clahe(img)
+
     img = normalize_to_8bit(img)
 
     # no more than 3 channels are currently supported, as SAM is trained on RBG data

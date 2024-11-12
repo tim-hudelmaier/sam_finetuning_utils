@@ -17,6 +17,30 @@ import torch
 import micro_sam.training as sam_training
 from micro_sam.training.util import normalize_to_8bit
 
+from adaptive_histogram_equalization import apply_clahe
+
+
+@dataclass
+class SAMFinetuneConfig:
+    batch_size: int
+    patch_shape: tuple[int, int]
+    train_instance_segmentation: bool
+    n_samples: int
+    n_objects_per_batch: int
+    n_epochs: int
+    model_type: str
+    checkpoint_name: str
+    channels_of_interest: list[str]
+    clahe: bool
+
+    @classmethod
+    def from_json(cls, json_path: str | Path):
+        with open(json_path, "r") as f:
+            config = json.load(f)
+        if config.get("patch_shape") is not None:
+            config["patch_shape"] = tuple(config["patch_shape"])
+        return cls(**config)
+
 
 def make_consecutive_labels(labels: np.ndarray) -> np.ndarray:
     """Make consecutive labels."""
@@ -80,7 +104,7 @@ def preprocess_img_data(
     img_dir: str | Path,
     label_dir: str | Path,
     output_dir: str | Path,
-    channels_of_interest: list[str],
+    config: SAMFinetuneConfig,
 ) -> tuple[list[str], list[str], list[str], list[str]]:
     img_dir = Path(img_dir)
     label_dir = Path(label_dir)
@@ -110,7 +134,11 @@ def preprocess_img_data(
         label = crop_bottom_z(label, "CZYX", img.shape[1])
 
         # select image channels
-        img = subset_img_to_channels(img, img_reader, channels_of_interest)
+        img = subset_img_to_channels(img, img_reader, config.channels_of_interest)
+
+        # optional: apply CLAHE
+        if config.clahe:
+            img = apply_clahe(img)
 
         # split train & validaton (split array in 4 parts and use the first 3 for training)
         img_splits = split_img(img)
@@ -156,27 +184,6 @@ def preprocess_img_data(
     val_image_paths = natsorted([str(p) for p in val_dir.glob("img_*.tif")])
     val_label_paths = natsorted([str(p) for p in val_dir.glob("label_*.tif")])
     return train_image_paths, train_label_paths, val_image_paths, val_label_paths
-
-
-@dataclass
-class SAMFinetuneConfig:
-    batch_size: int
-    patch_shape: tuple[int, int]
-    train_instance_segmentation: bool
-    n_samples: int
-    n_objects_per_batch: int
-    n_epochs: int
-    model_type: str
-    checkpoint_name: str
-    channels_of_interest: list[str]
-
-    @classmethod
-    def from_json(cls, json_path: str | Path):
-        with open(json_path, "r") as f:
-            config = json.load(f)
-        if config.get("patch_shape") is not None:
-            config["patch_shape"] = tuple(config["patch_shape"])
-        return cls(**config)
 
 
 def prep_data_loaders(
@@ -238,7 +245,7 @@ def main(
             img_dir,
             label_dir,
             output_dir,
-            config.channels_of_interest,
+            config,
         )
     )
     train_loader, val_loader = prep_data_loaders(
