@@ -68,6 +68,14 @@ def split_img(img, n_cuts=2, axis_str="CZYX"):
     return img_splits
 
 
+def subset_img_to_channels(
+    img: np.ndarray, reader: BioImage, channels: list[str]
+) -> np.ndarray:
+    """Subset the image to the channels of interest."""
+    channel_indices = [reader.channel_names.index(c) for c in channels]
+    return img[channel_indices, ...]
+
+
 def preprocess_img_data(
     img_dir: str | Path,
     label_dir: str | Path,
@@ -102,10 +110,7 @@ def preprocess_img_data(
         label = crop_bottom_z(label, "CZYX", img.shape[1])
 
         # select image channels
-        channel_indices = [
-            img_reader.channel_names.index(c) for c in channels_of_interest
-        ]
-        img = img[channel_indices, ...]
+        img = subset_img_to_channels(img, img_reader, channels_of_interest)
 
         # split train & validaton (split array in 4 parts and use the first 3 for training)
         img_splits = split_img(img)
