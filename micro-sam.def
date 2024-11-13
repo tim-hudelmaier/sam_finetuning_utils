@@ -7,4 +7,4 @@ From: condaforge/miniforge3:latest
   mamba env create -f environment_gpu.yaml
   mamba run -n sam pip install -e .
   mamba run -n sam pip install bioio bioio_ome_tiff einops loguru fire
-  apt-get -y update && apt-get install -y li
+  apt-get -y update && apt-get install -y libgl1-mesa-dev
