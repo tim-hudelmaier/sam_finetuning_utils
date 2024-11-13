@@ -13,7 +13,11 @@ from adaptive_histogram_equalization import apply_clahe
 
 
 def run_automatic_3d_segmentation(
-    image: np.ndarray, checkpoint: str, model_type: str, device: str | None = None
+    image: np.ndarray,
+    checkpoint: str,
+    model_type: str,
+    device: str | None = None,
+    embeddings_out_path: str | None = None,
 ):
     """
     Run automatic 3D segmentation on a given image.
@@ -22,7 +26,10 @@ def run_automatic_3d_segmentation(
         image (np.ndarray): The 3D image data to be segmented.
         checkpoint (str): Path to the model checkpoint to be used for segmentation.
         model_type (str): Type of the model to be used for segmentation.
-        device (str | None, optional): Device to run the segmentation on (e.g., 'cuda' or 'cpu'). Defaults to None, which will auto-select the device.
+        device (str | None, optional): Device to run the segmentation on (e.g., 'cuda' or 'cpu').
+            Defaults to None, which will auto-select the device.
+        embeddings_out_path (str | None, optional): Path to save the embeddings to.
+            Defaults to None. If None, embeddings will not be saved.
     """
 
     predictor, segmentor = get_predictor_and_segmenter(
@@ -31,7 +38,10 @@ def run_automatic_3d_segmentation(
 
     logger.info("Running automatic 3D segmentation")
     instances = automatic_3d_segmentation(
-        volume=image, predictor=predictor, segmentor=segmentor
+        volume=image,
+        predictor=predictor,
+        segmentor=segmentor,
+        embedding_path=embeddings_out_path,
     )
 
     return instances
@@ -58,6 +68,7 @@ def main(
     output_path: str,
     channels_path: str,
     clahe: bool = False,
+    embeddings_out_path: str | None = None,
 ):
     """Loads an image and runs automatic 3D segmentation on it.
     The segmentation results is saved as a TIFF file.
@@ -85,7 +96,10 @@ def main(
     img = einops.rearrange(img, "c z y x -> z y x c", c=3)
     logger.debug(f"Image shape: {img.shape}")
     instances = run_automatic_3d_segmentation(
-        image=img, checkpoint=checkpoint, model_type=model_type
+        image=img,
+        checkpoint=checkpoint,
+        model_type=model_type,
+        embeddings_out_path=embeddings_out_path,
     )
 
     save_segmentation_instance_to_tiff(instances, output_path)
