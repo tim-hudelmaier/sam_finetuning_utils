@@ -46,7 +46,7 @@ use your modified version in the finetune.py call in the `run_finetuning.sh` scr
   Solution: adding the following to the container used
 
   ```{bash}
-  sudo apt-get -y update && sudo apt-get install -y li`
+  sudo apt-get -y update && sudo apt-get install -y libgl1-mesa-dev`
   ```
 
   source: ![Github issue](https://github.com/nektos/act/issues/2438)
