@@ -11,9 +11,8 @@
 #SBATCH -e /scratch/thudelmaier/micro-sam/logs/slurm.%N.%j.err
 
 module load CUDA/12.5.0
-singularity exec --nv --bind /scratch/thudelmaier/micro-sam:/scratch/thudelmaier/micro-sam micro-sam.sif \
-  bash -c "source activate micro-sam && \
-  python /scratch/thudelmaier/micro-sam/finetune.py \
+apptainer exec --nv --bind /scratch:/scratch docker://timjhudelmaier/pixi-micro-sam-th:latest \
+  /bin/bash -c "cd /repo && pixi run python -m /scratch/thudelmaier/micro-sam/finetune.py \
   --config_path /scratch/thudelmaier/micro-sam/default_config.json \
   --img_dir /scratch/thudelmaier/micro-sam/avia \
   --label_dir /scratch/thudelmaier/micro-sam/segmentation \
