@@ -1,10 +1,14 @@
+from pathlib import Path
 from bioio import BioImage
 import einops
 import fire
 from loguru import logger
 import numpy as np
 
-from micro_sam.automatic_segmentation import get_predictor_and_segmenter
+from micro_sam.automatic_segmentation import (
+    get_predictor_and_segmenter,
+    automatic_instance_segmentation,
+)
 from micro_sam.multi_dimensional_segmentation import automatic_3d_segmentation
 from micro_sam.training.util import normalize_to_8bit
 
@@ -12,18 +16,22 @@ from finetune import subset_img_to_channels
 from adaptive_histogram_equalization import apply_clahe
 
 
-def run_automatic_3d_segmentation(
+def run_automatic_segmentation(
     image: np.ndarray,
+    ndim: int,
     checkpoint: str,
     model_type: str,
+    masks_out_path: str,
     device: str | None = None,
     embeddings_out_path: str | None = None,
 ):
     """
-    Run automatic 3D segmentation on a given image.
+    Run automatic segmentation on a given 2d or 3d image.
 
     Args:
         image (np.ndarray): The 3D image data to be segmented.
+        ndim (int): Number of dimensions of the image data.
+        masks_out_path (str): Path to save the segmentation
         checkpoint (str): Path to the model checkpoint to be used for segmentation.
         model_type (str): Type of the model to be used for segmentation.
         device (str | None, optional): Device to run the segmentation on (e.g., 'cuda' or 'cpu').
@@ -36,41 +44,30 @@ def run_automatic_3d_segmentation(
         model_type=model_type, checkpoint=checkpoint, device=device
     )
 
-    logger.info("Running automatic 3D segmentation")
-    instances = automatic_3d_segmentation(
-        volume=image,
+    # NOTE: Input path also accepts numpy arrays
+    instances = automatic_instance_segmentation(
         predictor=predictor,
-        segmentor=segmentor,
+        segmenter=segmentor,
+        input_path=image,
+        output_path=masks_out_path,
         embedding_path=embeddings_out_path,
+        ndim=ndim,
     )
 
     return instances
-
-
-def save_segmentation_instance_to_tiff(instance: np.ndarray, output_path: str):
-    """
-    Save the segmentation instance to a TIFF file.
-    Args:
-        instance (np.ndarray): The segmentation instance to be saved.
-        output_path (str): Path to save the segmentation instance to.
-    """
-    assert instance.ndim == 3, "Instance must be 3D"
-
-    logger.info(f"Saving segmentation instance to {output_path}")
-    img_reader = BioImage(image=instance)
-    img_reader.save(output_path)
 
 
 def main(
     img_path: str,
     checkpoint: str,
     model_type: str,
+    ndim: int,
     output_path: str,
     channels_path: str,
     clahe: bool = False,
     embeddings_out_path: str | None = None,
 ):
-    """Loads an image and runs automatic 3D segmentation on it.
+    """Loads an image and runs automatic 3D segmentation or 2D segmentation over the z layers.
     The segmentation results is saved as a TIFF file.
 
     Args:
@@ -94,15 +91,42 @@ def main(
 
     # no more than 3 channels are currently supported, as SAM is trained on RBG data
     img = einops.rearrange(img, "c z y x -> z y x c", c=3)
-    logger.debug(f"Image shape: {img.shape}")
-    instances = run_automatic_3d_segmentation(
-        image=img,
-        checkpoint=checkpoint,
-        model_type=model_type,
-        embeddings_out_path=embeddings_out_path,
-    )
 
-    save_segmentation_instance_to_tiff(instances, output_path)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    embeddings_out_path = Path(embeddings_out_path)
+    if embeddings_out_path is not None:
+        embeddings_out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if ndim == 3:
+        logger.debug(f"Image shape: {img.shape}")
+        _ = run_automatic_segmentation(
+            image=img,
+            ndim=ndim,
+            checkpoint=checkpoint,
+            model_type=model_type,
+            masks_out_path=output_path,
+            embeddings_out_path=embeddings_out_path,
+        )
+    elif ndim == 2:
+        for z in range(img.shape[0]):
+            logger.debug(f"Processing slice {z}...")
+
+            if embeddings_out_path is not None:
+                layer_embeddings_out_path = embeddings_out_path / f"layer_{z}"
+                layer_embeddings_out_path.mkdir(parents=True, exist_ok=True)
+            else:
+                layer_embeddings_out_path = None
+
+            _ = run_automatic_segmentation(
+                image=img[z],
+                ndim=ndim,
+                checkpoint=checkpoint,
+                model_type=model_type,
+                masks_out_path=output_path.parent
+                / output_path.name.replace(".tif", f"_{z}.tif"),
+                embeddings_out_path=layer_embeddings_out_path,
+            )
 
 
 if __name__ == "__main__":
