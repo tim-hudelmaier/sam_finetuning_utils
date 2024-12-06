@@ -9,7 +9,6 @@ from micro_sam.automatic_segmentation import (
     get_predictor_and_segmenter,
     automatic_instance_segmentation,
 )
-from micro_sam.multi_dimensional_segmentation import automatic_3d_segmentation
 from micro_sam.training.util import normalize_to_8bit
 
 from finetune import subset_img_to_channels
@@ -19,7 +18,7 @@ from adaptive_histogram_equalization import apply_clahe
 def run_automatic_segmentation(
     image: np.ndarray,
     ndim: int,
-    checkpoint: str,
+    checkpoint: str | None,
     model_type: str,
     masks_out_path: str,
     device: str | None = None,
@@ -59,11 +58,11 @@ def run_automatic_segmentation(
 
 def main(
     img_path: str,
-    checkpoint: str,
     model_type: str,
     ndim: int,
     output_path: str,
     channels_path: str,
+    checkpoint: str | None = None,
     clahe: bool = False,
     embeddings_out_path: str | None = None,
 ):
