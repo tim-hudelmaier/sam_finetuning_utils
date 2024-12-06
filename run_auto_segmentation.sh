@@ -15,10 +15,9 @@ apptainer exec --nv --bind /scratch:/scratch docker://timjhudelmaier/pixi-micro-
   /bin/bash -c "cd /repo && pixi run python /scratch/thudelmaier/micro-sam/sam_finetuning_utils/automatic_3d_segmentation.py \
   --img_path /scratch/thudelmaier/leica/data/new_data_extracted/unperturbed_scene5.tif \
   --ndim 3 \
-  --checkpoint /scratch/thudelmaier/micro-sam/results/clahe-finetune-vit-l-lm/models/checkpoints/vit_l_lm_clahe/best.pt \
   --model_type vit_l_lm \
-  --output_path /scratch/thudelmaier/micro-sam/results/new_data/segmentation_unperturbed.tiff \
+  --output_path /scratch/thudelmaier/micro-sam/results/new_data/segmentation_unperturbed_vit_l_lm_raw.tiff \
   --channels_path /scratch/thudelmaier/micro-sam/sam_finetuning_utils/used_channels.txt \
   --clahe False \
-  --embeddings_out_path /scratch/thudelmaier/micro-sam/results/new_data/new_data_3d_seg_ActD
+  --embeddings_out_path /scratch/thudelmaier/micro-sam/results/new_data/new_data_3d_seg_unperturbed_vit_l_lm_raw
   "
