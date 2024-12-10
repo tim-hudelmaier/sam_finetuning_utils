@@ -61,9 +61,11 @@ def main(
     model_type: str,
     ndim: int,
     output_path: str,
-    channels_path: str,
+    channels_path: str | None = None,
     checkpoint: str | None = None,
     clahe: bool = False,
+    merge_channels: bool = False,
+    merge_method: str = "mean",
     embeddings_out_path: str | None = None,
 ):
     """Loads an image and runs automatic 3D segmentation or 2D segmentation over the z layers.
@@ -78,10 +80,11 @@ def main(
     img_reader = BioImage(img_path)
     img = img_reader.get_image_data("CZYX")
 
-    with open(channels_path, "r") as f:
-        channels_of_interest = f.read().splitlines()
+    if channels_path is not None:
+        with open(channels_path, "r") as f:
+            channels_of_interest = f.read().splitlines()
 
-    img = subset_img_to_channels(img, img_reader, channels_of_interest)
+        img = subset_img_to_channels(img, img_reader, channels_of_interest)
 
     if clahe:
         img = apply_clahe(img)
@@ -89,12 +92,26 @@ def main(
     img = normalize_to_8bit(img)
 
     # no more than 3 channels are currently supported, as SAM is trained on RBG data
-    img = einops.rearrange(img, "c z y x -> z y x c", c=3)
+    img = einops.rearrange(img, "c z y x -> z y x c")
+
+    # repeating 3x, since segment anything expects 3 channels (rgb)
+    # micro sam under the hood does the same when using 2 channels
+    if merge_channels:
+        logger.info("Merging channels...")
+        img = einops.reduce(img, "z y x c -> z y x", merge_method)
+        img = einops.repeat(img, "z y x -> z y x c", c=3)
+    else:
+        if img.shape[-1] == 1:
+            img = einops.repeat(img, "z y x c -> z y x c", c=3)
+        elif img.shape[-1] == 3:
+            pass
+        else:
+            raise ValueError("Only 1 or 3 channels are currently supported.")
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    embeddings_out_path = Path(embeddings_out_path)
     if embeddings_out_path is not None:
+        embeddings_out_path = Path(embeddings_out_path)
         embeddings_out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if ndim == 3:
