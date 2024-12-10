@@ -16,8 +16,8 @@ apptainer exec --nv --bind /scratch:/scratch docker://timjhudelmaier/pixi-micro-
   --img_path /scratch/thudelmaier/leica/data/new_data_extracted/unperturbed_scene5.tif \
   --ndim 3 \
   --model_type vit_l_lm \
-  --output_path /scratch/thudelmaier/micro-sam/results/new_data/segmentation_unperturbed_vit_l_lm_raw.tiff \
-  --channels_path /scratch/thudelmaier/micro-sam/sam_finetuning_utils/used_channels.txt \
+  --output_path /scratch/thudelmaier/micro-sam/results/new_data/segmentation_unperturbed_vit_l_lm_all_channels_aggmax.tiff \
   --clahe False \
-  --embeddings_out_path /scratch/thudelmaier/micro-sam/results/new_data/new_data_3d_seg_unperturbed_vit_l_lm_raw
-  "
+  --merge_channels True \
+  --merge_method max \
+"
