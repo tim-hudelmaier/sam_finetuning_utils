@@ -73,9 +73,17 @@ def main(
 
     Args:
         img_path (str): Path to the image to be segmented.
-        checkpoint (str): Path to the model checkpoint to be used for segmentation.
         model_type (str): Type of the model to be used for segmentation.
+        ndim (int): Number of dimensions of the image data. (2 or 3)
         output_path (str): Path to save the segmentation instance to.
+        channels_path (str | None, optional): Path to a file containing the channels of interest.
+        checkpoint (str): Path to the model checkpoint to be used for segmentation.
+        clahe (bool, optional): Whether to apply CLAHE to the image. Defaults to False.
+        merge_channels (bool, optional): Whether to merge the channels. Defaults to False.
+        merge_method (str, optional): Method to merge the channels.
+            Defaults to "mean" (other options: max, sum).
+        embeddings_out_path (str | None, optional): Path to save the embeddings to.
+            Defaults to None.
     """
     img_reader = BioImage(img_path)
     img = img_reader.get_image_data("CZYX")
