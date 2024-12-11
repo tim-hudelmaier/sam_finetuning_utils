@@ -5,12 +5,10 @@
   "n_samples": 100,
   "n_objects_per_batch": 5,
   "n_epochs": 10,
-  "model_type": "vit_b",
-  "checkpoint_name": "vit_b_test_run",
-  "channels_of_interest": [
-    "WGA_CF770_Gating",
-    "VIMENTIN_ATTO_490LS_Gating",
-    "alphaTUBULIN_ATTO_425_Gating"
-  ],
-  "clahe": true
+  "model_type": "vit_l_lm",
+  "checkpoint_name": "vit_l_unperturbed_ft",
+  "channels_of_interest": null,
+  "clahe": false,
+  "merge_channels": true,
+  "merge_method": "max"
 }

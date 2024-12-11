@@ -7,6 +7,7 @@ import random
 from typing import List
 
 from bioio import BioImage
+import bioio_tifffile
 import einops
 import fire
 import imageio.v3 as imageio
@@ -30,8 +31,10 @@ class SAMFinetuneConfig:
     n_epochs: int
     model_type: str
     checkpoint_name: str
-    channels_of_interest: list[str]
+    channels_of_interest: list[str] | None
     clahe: bool
+    merge_channels: bool
+    merge_method: str
 
     @classmethod
     def from_json(cls, json_path: str | Path):
@@ -108,7 +111,7 @@ def preprocess_img_data(
 ) -> tuple[list[str], list[str], list[str], list[str]]:
     img_dir = Path(img_dir)
     label_dir = Path(label_dir)
-    img_files = list(img_dir.glob("*.aivia.tif"))
+    img_files = list(img_dir.glob("*.tif"))
     label_files = list(label_dir.glob("*.tif"))
     img_files, label_files = natsorted(img_files), natsorted(label_files)
 
@@ -125,7 +128,7 @@ def preprocess_img_data(
         logger.info(f"Processing {img_file} and {label_file}")
 
         # load label and image data
-        label_reader = BioImage(label_file)
+        label_reader = BioImage(label_file, reader=bioio_tifffile.Reader)
         label = label_reader.get_image_data("CZYX")
         img_reader = BioImage(img_file)
         img = img_reader.get_image_data("CZYX")
@@ -134,11 +137,16 @@ def preprocess_img_data(
         label = crop_bottom_z(label, "CZYX", img.shape[1])
 
         # select image channels
-        img = subset_img_to_channels(img, img_reader, config.channels_of_interest)
+        if config.channels_of_interest is not None:
+            img = subset_img_to_channels(img, img_reader, config.channels_of_interest)
 
         # optional: apply CLAHE
         if config.clahe:
             img = apply_clahe(img)
+
+        if config.merge_channels:
+            img = einops.reduce(img, "C Z Y X -> Z Y X", config.merge_method)
+            img = einops.repeat(img, "Z Y X -> C Z Y X", C=3)
 
         # split train & validaton (split array in 4 parts and use the first 3 for training)
         img_splits = split_img(img)
