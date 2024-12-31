@@ -1,5 +1,6 @@
 from pathlib import Path
 from bioio import BioImage
+from bioio.writers import OmeTiffWriter
 import einops
 import fire
 from loguru import logger
@@ -54,6 +55,48 @@ def run_automatic_segmentation(
     )
 
     return instances
+
+
+def merge_img_channels(
+    img_path: str,
+    method: str = "max",
+    return_img: bool = False,
+    save_path: str | None = None,
+    cellpose_channel_order: bool = False,
+):
+    """
+    Merges the channels of an image. And optionally returns or saves the image.
+
+    Args:
+        img_path (str): Path to the image to be segmented.
+        method (str, optional): Method to merge the channels.
+            Defaults to "max" (other options: mean, sum).
+        return_img (bool, optional): Whether to return the image.
+            Defaults to False.
+        save_path (str | None, optional): Path to save the merged image.
+            Defaults to None.
+    """
+    channel_str = "CZYX"
+    img_reader = BioImage(img_path)
+    img = img_reader.get_image_data(channel_str)
+
+    img = normalize_to_8bit(img)
+
+    # repeating 3x, since segment anything expects 3 channels (rgb)
+    # micro sam under the hood does the same when using 2 channels
+    logger.info("Merging channels...")
+    img = einops.reduce(img, "c z y x -> z y x", method)
+    img = einops.repeat(img, "z y x -> c z y x", c=3)
+
+    if cellpose_channel_order:
+        img = einops.rearrange(img, "c z y x -> z c y x")
+        channel_str = "ZCYX"
+
+    if save_path is not None:
+        OmeTiffWriter.save(img, save_path, dim_order=channel_str)
+
+    if return_img:
+        return img
 
 
 def main(
@@ -154,4 +197,4 @@ def main(
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    fire.Fire()
