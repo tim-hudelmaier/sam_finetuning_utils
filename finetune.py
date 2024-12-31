@@ -241,7 +241,9 @@ def main(
     output_dir: str | Path,
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    logger.info(f"Using device: {device}")
+
+    if device != "cuda":
+        raise ValueError("CUDA is required for training")
 
     config = SAMFinetuneConfig.from_json(config_path)
 
