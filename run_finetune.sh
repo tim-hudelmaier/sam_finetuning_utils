@@ -11,8 +11,8 @@
 #SBATCH -e /scratch/thudelmaier/logs/finetune/slurm.%N.%j.err
 
 module load CUDA/12.5.0
-apptainer exec --nv --bind /scratch:/scratch docker://timjhudelmaier/pixi-micro-sam-th:latest \
-  /bin/bash -c "cd /repo && pixi run python /scratch/thudelmaier/micro-sam/sam_finetuning_utils/finetune.py \
+apptainer exec --nv --writable-tmpfs --bind /scratch:/scratch docker://timjhudelmaier/pixi-micro-sam-th:latest \
+  /bin/bash -c "cd /repo && pixi run -e cuda python /scratch/thudelmaier/micro-sam/sam_finetuning_utils/finetune.py \
   --config_path /scratch/thudelmaier/micro-sam/sam_finetuning_utils/default_config.json \
   --img_dir /scratch/thudelmaier/leica/data/border_imgs \
   --label_dir /scratch/thudelmaier/leica/data/border_segs \
