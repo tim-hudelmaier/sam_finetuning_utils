@@ -12,7 +12,7 @@
 
 module load CUDA/12.5.0
 apptainer exec --nv --bind /scratch:/scratch docker://timjhudelmaier/pixi-micro-sam-th:latest \
-  /bin/bash -c "cd /repo && pixi run python /scratch/thudelmaier/micro-sam/sam_finetuning_utils/automatic_3d_segmentation.py \
+  /bin/bash -c "cd /repo && pixi run python /scratch/thudelmaier/micro-sam/sam_finetuning_utils/automatic_3d_segmentation.py main \
   --img_path /scratch/thudelmaier/leica/data/new_data_extracted/unperturbed_scene5.tif \
   --ndim 3 \
   --model_type vit_l_lm \
