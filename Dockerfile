@@ -2,8 +2,9 @@ FROM ghcr.io/prefix-dev/pixi:latest
 
 WORKDIR /repo
 
-# COPY pixi.lock /repo/pixi.lock
+COPY pixi.lock /repo/pixi.lock
 COPY pyproject.toml /repo/pyproject.toml
+COPY sam_finetuning_utils /repo/sam_finetuning_utils
 
 RUN apt-get update && apt-get install -y git
 RUN /usr/local/bin/pixi install --manifest-path pyproject.toml --environment cuda
