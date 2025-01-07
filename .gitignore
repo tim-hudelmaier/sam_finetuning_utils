@@ -3,3 +3,6 @@ __pycache__/
 
 # ignore results
 *.csv
+
+# ignore pixi envs
+.pixi/
