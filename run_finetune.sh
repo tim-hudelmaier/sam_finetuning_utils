@@ -12,9 +12,9 @@
 
 module load CUDA/12.5.0
 apptainer exec --nv --writable-tmpfs --bind /scratch:/scratch docker://timjhudelmaier/pixi-micro-sam-th:latest \
-  /bin/bash -c "cd /repo && pixi run -e cuda python /scratch/thudelmaier/micro-sam/sam_finetuning_utils/finetune.py \
+  /bin/bash -c "cd /repo && pixi run -e cuda python -m finetune \
   --config_path /scratch/thudelmaier/micro-sam/sam_finetuning_utils/default_config.json \
-  --img_dir /scratch/thudelmaier/leica/data/border_imgs \
-  --label_dir /scratch/thudelmaier/leica/data/border_segs \
+  --img_dir /scratch/thudelmaier/leica/data/avia \
+  --label_dir /scratch/thudelmaier/leica/data/segmentations \
   --output_dir /scratch/thudelmaier/micro-sam/results/border-finetune
   "

@@ -12,11 +12,12 @@
 
 module load CUDA/12.5.0
 apptainer exec --nv --bind /scratch:/scratch docker://timjhudelmaier/pixi-micro-sam-th:latest \
-  /bin/bash -c "cd /repo && pixi run python /scratch/thudelmaier/micro-sam/sam_finetuning_utils/automatic_3d_segmentation.py main \
+  /bin/bash -c "cd /repo && pixi run python -m automatic_3d_segmentation \
   --img_path /scratch/thudelmaier/leica/data/new_data_extracted/unperturbed_scene5.tif \
   --ndim 3 \
   --model_type vit_l_lm \
-  --output_path /scratch/thudelmaier/micro-sam/results/new_data/segmentation_unperturbed_vit_l_lm_all_channels_aggmax.tiff \
+  --checkpoint /scratch/thudelmaier/micro-sam/results/border-finetune/models/checkpoints/vit_l_unperturbed_ft/best.pt \
+  --output_path /scratch/thudelmaier/micro-sam/results/new_data/segmentation_unperturbed_vit_l_lm_finetuned_all_channels_aggmax.tiff \
   --clahe False \
   --merge_channels True \
   --merge_method max \
