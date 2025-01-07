@@ -18,7 +18,7 @@ import torch
 import micro_sam.training as sam_training
 from micro_sam.training.util import normalize_to_8bit
 
-from adaptive_histogram_equalization import apply_clahe
+from sam_finetuning_utils.adaptive_histogram_equalization import apply_clahe
 
 
 @dataclass

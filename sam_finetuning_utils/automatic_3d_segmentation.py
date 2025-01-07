@@ -12,8 +12,8 @@ from micro_sam.automatic_segmentation import (
 )
 from micro_sam.training.util import normalize_to_8bit
 
-from finetune import subset_img_to_channels
-from adaptive_histogram_equalization import apply_clahe
+from sam_finetuning_utils.finetune import subset_img_to_channels
+from sam_finetuning_utils.adaptive_histogram_equalization import apply_clahe
 
 
 def run_automatic_segmentation(
@@ -197,4 +197,4 @@ def main(
 
 
 if __name__ == "__main__":
-    fire.Fire()
+    fire.Fire(main)

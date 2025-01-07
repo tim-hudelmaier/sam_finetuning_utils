@@ -6,7 +6,7 @@ import numpy as np
 from skimage import exposure
 from tqdm import tqdm
 
-from open_napari import open_napari
+from sam_finetuning_utils.open_napari import open_napari
 
 
 def apply_clahe(image: np.ndarray, clip_limit: float = 0.9) -> np.ndarray:
@@ -21,8 +21,6 @@ def apply_clahe(image: np.ndarray, clip_limit: float = 0.9) -> np.ndarray:
         img = einops.rearrange(image[channel], "Z Y X -> X Y Z")
 
         # Rescale image data to range [0, 1]
-        # leave lower nitensities in to remain sensitive, remove high intensities for better contrast
-        # testing absolute photon count to remove backgound noise
         clip_boundaries = (5, np.percentile(img, 70))
         img = np.clip(img, *clip_boundaries)
         img = (img - img.min()) / (img.max() - img.min())

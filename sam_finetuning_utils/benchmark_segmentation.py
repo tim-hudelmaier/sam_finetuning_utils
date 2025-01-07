@@ -64,6 +64,7 @@ def main(
     segmentation_path: str,
     ground_truth_path: str,
     output_path: str,
+    z_slice: str | None = None,
 ):
     """
     Computes IoU between segmentation and grouund truth masks and stores them in a csv.
@@ -76,6 +77,17 @@ def main(
     logger.info("Loading images...")
     segs = open_image(segmentation_path, "ZXY")
     gts = open_image(ground_truth_path, "ZXY")
+
+    if z_slice is not None:
+        z_split = z_slice.split(":")
+        z_start = int(z_split[0]) if z_split[0] != "" else None
+        z_end = int(z_split[1]) if len(z_split) > 1 else None
+
+        # slice the images
+        logger.debug(f"Using z-slice {z_start}:{z_end}, image_shape={segs.shape}")
+        segs = segs[z_start:z_end]
+        gts = gts[z_start:z_end]
+        logger.debug(f"New image_shape={segs.shape}")
 
     logger.info("Loading mask coordinates...")
     seg_labels, seg_coords = get_labels_and_coords(segs)
