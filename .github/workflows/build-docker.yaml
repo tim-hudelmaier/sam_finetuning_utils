@@ -1,0 +1,46 @@
+# FILE: .github/workflows/build-docker.yaml
+name: Build docker container
+
+on: push
+
+jobs:
+  build-container:
+    name: Build container
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            timjhudelmaier/pixi-micro-sam-th
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=sha
+            type=raw,value=latest
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # NOTE: Change this to your own AWS ECR login or other container repo service,
+      # such as GitHub Container Registry, which doesn't require login tokens.
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
