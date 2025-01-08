@@ -104,7 +104,7 @@ def main(
     model_type: str,
     ndim: int,
     output_path: str,
-    channels_path: str | None = None,
+    channels_path: str | list[str] | None = None,
     checkpoint: str | None = None,
     clahe: bool = False,
     merge_channels: bool = False,
@@ -131,11 +131,15 @@ def main(
     img_reader = BioImage(img_path)
     img = img_reader.get_image_data("CZYX")
 
-    if channels_path is not None:
+    if channels_path is not None and isinstance(channels_path, str):
         with open(channels_path, "r") as f:
             channels_of_interest = f.read().splitlines()
 
         img = subset_img_to_channels(img, img_reader, channels_of_interest)
+
+    # FIXME: name this better, but check first if okay to change the name
+    if isinstance(channels_path, list):
+        img = subset_img_to_channels(img, img_reader, channels_path)
 
     if clahe:
         img = apply_clahe(img)
