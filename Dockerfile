@@ -7,7 +7,7 @@ COPY pyproject.toml /repo/pyproject.toml
 COPY sam_finetuning_utils /repo/sam_finetuning_utils
 
 RUN apt-get update && apt-get install -y git
-RUN /usr/local/bin/pixi install --manifest-path pyproject.toml --environment cuda
+RUN /usr/local/bin/pixi install --manifest-path pyproject.toml --environment cuda && rm -rf ~/.cache/rattler
 
 # create a shell-hook so commands passed tot he container are run in the env
 RUN pixi shell-hook -s bash > /shell-hook
