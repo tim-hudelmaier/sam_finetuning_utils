@@ -243,7 +243,8 @@ def main(
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if device != "cuda":
-        raise ValueError("CUDA is required for training")
+        logger.warning("CUDA is not available, training will be slow")
+        # raise ValueError("CUDA is required for training")
 
     if not isinstance(config_path, SAMFinetuneConfig):
         config = SAMFinetuneConfig.from_json(config_path)
