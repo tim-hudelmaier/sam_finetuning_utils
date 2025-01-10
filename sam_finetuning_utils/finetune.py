@@ -45,6 +45,10 @@ class SAMFinetuneConfig:
         return cls(**config)
 
 
+def rm_hidden_files(files: list[str]) -> list[str]:
+    return [f for f in files if not f.startswith(".")]
+
+
 def make_consecutive_labels(labels: np.ndarray) -> np.ndarray:
     """Make consecutive labels."""
     unique_labels = np.unique(labels)
@@ -272,6 +276,12 @@ def main(
     train_label_paths = list(Path(label_dir).glob("*.tif")) + list(
         Path(label_dir).glob("*.tiff")
     )
+    train_image_paths = [str(p) for p in train_image_paths]
+    train_label_paths = [str(p) for p in train_label_paths]
+    train_image_paths = rm_hidden_files(train_image_paths)
+    train_label_paths = rm_hidden_files(train_label_paths)
+    train_image_paths = natsorted(train_image_paths)
+    train_label_paths = natsorted(train_label_paths)
     train_loader, val_loader = prep_data_loaders(
         train_image_paths,
         train_label_paths,
