@@ -254,6 +254,8 @@ def main(
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
 
+    # FIXME: using same data as training and validation
+    """
     train_image_paths, train_label_paths, val_image_paths, val_label_paths = (
         preprocess_img_data(
             img_dir,
@@ -262,8 +264,20 @@ def main(
             config,
         )
     )
+    """
+
+    train_image_paths = list(Path(img_dir).glob("*.tif")) + list(
+        Path(img_dir).glob("*.tiff")
+    )
+    train_label_paths = list(Path(label_dir).glob("*.tif")) + list(
+        Path(label_dir).glob("*.tiff")
+    )
     train_loader, val_loader = prep_data_loaders(
-        train_image_paths, train_label_paths, val_image_paths, val_label_paths, config
+        train_image_paths,
+        train_label_paths,
+        train_image_paths,
+        train_label_paths,
+        config,
     )
 
     logger.info("Starting training")
