@@ -235,7 +235,7 @@ def prep_data_loaders(
 
 
 def main(
-    config_path: str | Path,
+    config_path: str | Path | SAMFinetuneConfig,
     img_dir: str | Path,
     label_dir: str | Path,
     output_dir: str | Path,
@@ -245,7 +245,10 @@ def main(
     if device != "cuda":
         raise ValueError("CUDA is required for training")
 
-    config = SAMFinetuneConfig.from_json(config_path)
+    if not isinstance(config_path, SAMFinetuneConfig):
+        config = SAMFinetuneConfig.from_json(config_path)
+    else:
+        config = config_path
 
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
