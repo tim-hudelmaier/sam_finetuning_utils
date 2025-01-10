@@ -270,10 +270,10 @@ def main(
     )
     """
 
-    train_image_paths = list(Path(img_dir).glob("*.tif")) + list(
+    train_image_paths = list(Path(img_dir).rglob("*.tif")) + list(
         Path(img_dir).glob("*.tiff")
     )
-    train_label_paths = list(Path(label_dir).glob("*.tif")) + list(
+    train_label_paths = list(Path(label_dir).rglob("*.tif")) + list(
         Path(label_dir).glob("*.tiff")
     )
     train_image_paths = [str(p) for p in train_image_paths]
