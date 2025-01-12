@@ -7,6 +7,7 @@ import random
 from typing import List
 
 from bioio import BioImage
+
 import bioio_tifffile
 import einops
 import fire
@@ -112,32 +113,46 @@ def preprocess_img_data(
     label_dir: str | Path,
     output_dir: str | Path,
     config: SAMFinetuneConfig,
-) -> tuple[list[str], list[str], list[str], list[str]]:
+) -> tuple[list[str], list[str]]:
     img_dir = Path(img_dir)
     label_dir = Path(label_dir)
-    img_files = list(img_dir.glob("*.tif"))
-    label_files = list(label_dir.glob("*.tif"))
+    img_files = list(img_dir.glob("*.tif")) + list(img_dir.glob("*.tiff"))
+    label_files = list(label_dir.glob("*.tif")) + list(label_dir.glob("*.tiff"))
+    img_files = [str(p) for p in img_files]
+    label_files = [str(p) for p in label_files]
+    img_files = rm_hidden_files(img_files)
+    label_files = rm_hidden_files(label_files)
     img_files, label_files = natsorted(img_files), natsorted(label_files)
 
     train_dir = Path(output_dir) / "train"
-    val_dir = Path(output_dir) / "val"
 
     train_dir.mkdir(exist_ok=True)
-    val_dir.mkdir(exist_ok=True)
 
-    val_imgs = []
     train_imgs = []
 
     for img_file, label_file in zip(img_files, label_files):
         logger.info(f"Processing {img_file} and {label_file}")
 
         # load label and image data
-        label_reader = BioImage(label_file, reader=bioio_tifffile.Reader)
-        label = label_reader.get_image_data("CZYX")
         img_reader = BioImage(img_file)
         img = img_reader.get_image_data("CZYX")
+        label_reader = BioImage(label_file, reader=bioio_tifffile.Reader)
+        logger.debug(f"label dims: {label_reader.dims}")
+
+        # match dims of label and img
+        # TODO: hardcoded is not optimal here, but currently the best solution...
+        if img_reader._dims["Z"] == label_reader._dims["Z"]:
+            label = label_reader.get_image_data("CZYX")
+        elif img_reader._dims["Z"] == label_reader._dims["S"]:
+            label = label_reader.get_image_data("CSYX")
+        else:
+            raise ValueError(
+                f"Image ({img_reader._dims}) and label ({label_reader._dims}) dimensions do not match."
+            )
 
         # crop label frames
+        print("label shape", label.shape)
+        print("img shape", img.shape)
         label = crop_bottom_z(label, "CZYX", img.shape[1])
 
         # select image channels
@@ -152,26 +167,10 @@ def preprocess_img_data(
             img = einops.reduce(img, "C Z Y X -> Z Y X", config.merge_method)
             img = einops.repeat(img, "Z Y X -> C Z Y X", C=3)
 
-        # split train & validaton (split array in 4 parts and use the first 3 for training)
-        img_splits = split_img(img)
-        label_splits = split_img(label)
-
         # make labels consecutive
-        label_splits = [make_consecutive_labels(label) for label in label_splits]
+        label = make_consecutive_labels(label)
 
-        # select test_idx for validation
-        test_idx = random.choice(range(len(img_splits)))
-
-        val_img, val_label = img_splits[test_idx], label_splits[test_idx]
-        val_imgs.append((val_img, val_label))
-
-        train_imgs.extend(
-            [
-                (img, label)
-                for i, (img, label) in enumerate(zip(img_splits, label_splits))
-                if i != test_idx
-            ]
-        )
+        train_imgs.extend([(img, label)])
 
     # save images
     logger.info("Saving images")
@@ -183,19 +182,9 @@ def preprocess_img_data(
             imageio.imwrite(train_dir / f"img_{i}_{j}.tif", img[..., j])
             imageio.imwrite(train_dir / f"label_{i}_{j}.tif", label[..., 0, j])
 
-    for i, (img, label) in enumerate(val_imgs):
-        img = einops.rearrange(img, "C Z Y X -> Y X C Z")
-        label = einops.rearrange(label, "C Z Y X -> Y X C Z")
-
-        for j in range(img.shape[-1]):
-            imageio.imwrite(val_dir / f"img_{i}_{j}.tif", img[..., j])
-            imageio.imwrite(val_dir / f"label_{i}_{j}.tif", label[..., 0, j])
-
     train_image_paths = natsorted([str(p) for p in train_dir.glob("img_*.tif")])
     train_label_paths = natsorted([str(p) for p in train_dir.glob("label_*.tif")])
-    val_image_paths = natsorted([str(p) for p in val_dir.glob("img_*.tif")])
-    val_label_paths = natsorted([str(p) for p in val_dir.glob("label_*.tif")])
-    return train_image_paths, train_label_paths, val_image_paths, val_label_paths
+    return train_image_paths, train_label_paths
 
 
 def prep_data_loaders(
@@ -258,30 +247,16 @@ def main(
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
 
-    # FIXME: using same data as training and validation
-    """
-    train_image_paths, train_label_paths, val_image_paths, val_label_paths = (
-        preprocess_img_data(
-            img_dir,
-            label_dir,
-            output_dir,
-            config,
-        )
+    train_image_paths, train_label_paths = preprocess_img_data(
+        img_dir,
+        label_dir,
+        output_dir,
+        config,
     )
-    """
 
-    train_image_paths = list(Path(img_dir).rglob("*.tif")) + list(
-        Path(img_dir).glob("*.tiff")
-    )
-    train_label_paths = list(Path(label_dir).rglob("*.tif")) + list(
-        Path(label_dir).glob("*.tiff")
-    )
-    train_image_paths = [str(p) for p in train_image_paths]
-    train_label_paths = [str(p) for p in train_label_paths]
-    train_image_paths = rm_hidden_files(train_image_paths)
-    train_label_paths = rm_hidden_files(train_label_paths)
-    train_image_paths = natsorted(train_image_paths)
-    train_label_paths = natsorted(train_label_paths)
+    print(train_image_paths)
+    print(train_label_paths)
+
     train_loader, val_loader = prep_data_loaders(
         train_image_paths,
         train_label_paths,
