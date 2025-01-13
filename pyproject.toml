@@ -1,7 +1,7 @@
 [project]
 description = "utils to finetune micro-sam and generate embeddings for assisted segmentation."
 name = "sam_finetuning_utils"
-requires-python = ">= 3.11"
+requires-python = ">= 3.11,<3.12"
 version = "0.1.0"
 dependencies = [
   "bioio==1.1.0",
@@ -33,6 +33,7 @@ sam_finetuning_utils = { path = ".", editable = false }
 demo = "pixi r python sample_data/start_napari.py"
 
 [tool.pixi.dependencies]
+python = ">=3.11,<3.12"
 ipython = ">=8.31.0,<9"
 protobuf = "<5"
 magicgui = ">=0.9.1,<0.10"
