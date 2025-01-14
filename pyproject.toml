@@ -24,7 +24,7 @@ allow-direct-references = true
 
 [tool.pixi.project]
 channels = ["conda-forge", "pytorch"]
-platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
+platforms = ["linux-64", "osx-arm64", "osx-64"]
 
 [tool.pixi.pypi-dependencies]
 sam_finetuning_utils = { path = ".", editable = false }
@@ -53,3 +53,10 @@ python-elf = ">=0.4.8"
 napari = ">=0.5.0"
 imageio = ">=2.11.0,<2.28.0"
 imagecodecs = ">=2024.1.1,<2025"
+
+[tool.pixi.feature.cuda]
+system-requirements = { cuda = "12" } # this will support CUDA minor/patch versions!
+
+# Environments
+[tool.pixi.environments]
+cuda = ["cuda"]
