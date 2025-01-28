@@ -129,7 +129,6 @@ def preprocess_img_data(
     train_dir.mkdir(exist_ok=True)
 
     train_imgs = []
-    test_imgs = []
 
     for img_file, label_file in zip(img_files, label_files):
         logger.info(f"Processing {img_file} and {label_file}")
@@ -170,10 +169,10 @@ def preprocess_img_data(
 
         # create test set from labels
         label_ids = np.unique(label)
-        rng = np.generator.default_rng()
+        rng = np.random.default_rng()
         
         # default to useing 10% of the masks as validation set
-        test_size = int(len(label_ids) * 0.1)
+        test_size = int(len(label_ids) * 0.1) if len(label_ids) > 10 else 1
         test_ids = rng.choice(label_ids, size=test_size, replace=False)
         train_ids = np.setdiff1d(label_ids, test_ids)
         test_labels = label.copy()
@@ -192,9 +191,11 @@ def preprocess_img_data(
     # save images
     logger.info("Saving images")
     for i, (img, train_label, test_label) in enumerate(train_imgs):
+        print(img.shape, np.unique(train_label), np.unique(test_label))
+        print(train_label.shape, test_label.shape)
         img = einops.rearrange(img, "C Z Y X -> Y X C Z")
-        train_labels = einops.rearrange(train_label, "C Z Y X -> Y X C Z")
-        test_labels = einops.rearrange(test_label, "C Z Y X -> Y X C Z")
+        train_label = einops.rearrange(train_label, "C Z Y X -> Y X C Z")
+        test_label = einops.rearrange(test_label, "C Z Y X -> Y X C Z")
 
         for j in range(img.shape[-1]):
             imageio.imwrite(train_dir / f"img_{i}_{j}.tif", img[..., j])
