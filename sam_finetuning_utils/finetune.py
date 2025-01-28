@@ -113,7 +113,7 @@ def preprocess_img_data(
     label_dir: str | Path,
     output_dir: str | Path,
     config: SAMFinetuneConfig,
-) -> tuple[list[str], list[str]]:
+) -> tuple[list[str], list[str], list[str]]:
     img_dir = Path(img_dir)
     label_dir = Path(label_dir)
     img_files = list(img_dir.glob("*.tif")) + list(img_dir.glob("*.tiff"))
@@ -129,6 +129,7 @@ def preprocess_img_data(
     train_dir.mkdir(exist_ok=True)
 
     train_imgs = []
+    test_imgs = []
 
     for img_file, label_file in zip(img_files, label_files):
         logger.info(f"Processing {img_file} and {label_file}")
@@ -167,24 +168,43 @@ def preprocess_img_data(
             img = einops.reduce(img, "C Z Y X -> Z Y X", config.merge_method)
             img = einops.repeat(img, "Z Y X -> C Z Y X", C=3)
 
-        # make labels consecutive
-        label = make_consecutive_labels(label)
+        # create test set from labels
+        label_ids = np.unique(label)
+        rng = np.generator.default_rng()
+        
+        # default to useing 10% of the masks as validation set
+        test_size = int(len(label_ids) * 0.1)
+        test_ids = rng.choice(label_ids, size=test_size, replace=False)
+        train_ids = np.setdiff1d(label_ids, test_ids)
+        test_labels = label.copy()
+        mask = np.isin(label, test_ids)
+        test_labels[~mask] = 0
+        train_labels = label.copy()
+        mask = np.isin(label, train_ids)
+        train_labels[~mask] = 0
 
-        train_imgs.extend([(img, label)])
+        # make labels consecutive
+        train_labels = make_consecutive_labels(train_labels)
+        test_labels = make_consecutive_labels(test_labels)
+
+        train_imgs.extend([(img, train_labels, test_labels)])
 
     # save images
     logger.info("Saving images")
-    for i, (img, label) in enumerate(train_imgs):
+    for i, (img, train_label, test_label) in enumerate(train_imgs):
         img = einops.rearrange(img, "C Z Y X -> Y X C Z")
-        label = einops.rearrange(label, "C Z Y X -> Y X C Z")
+        train_labels = einops.rearrange(train_label, "C Z Y X -> Y X C Z")
+        test_labels = einops.rearrange(test_label, "C Z Y X -> Y X C Z")
 
         for j in range(img.shape[-1]):
             imageio.imwrite(train_dir / f"img_{i}_{j}.tif", img[..., j])
-            imageio.imwrite(train_dir / f"label_{i}_{j}.tif", label[..., 0, j])
+            imageio.imwrite(train_dir / f"train_label_{i}_{j}.tif", train_label[..., 0, j])
+            imageio.imwrite(train_dir / f"test_label_{i}_{j}.tif", test_label[..., 0, j])
 
     train_image_paths = natsorted([str(p) for p in train_dir.glob("img_*.tif")])
-    train_label_paths = natsorted([str(p) for p in train_dir.glob("label_*.tif")])
-    return train_image_paths, train_label_paths
+    train_label_paths = natsorted([str(p) for p in train_dir.glob("train_label_*.tif")])
+    test_label_paths = natsorted([str(p) for p in train_dir.glob("test_label_*.tif")])
+    return train_image_paths, train_label_paths, test_label_paths
 
 
 def prep_data_loaders(
@@ -247,7 +267,7 @@ def main(
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
 
-    train_image_paths, train_label_paths = preprocess_img_data(
+    train_image_paths, train_label_paths, test_label_paths = preprocess_img_data(
         img_dir,
         label_dir,
         output_dir,
@@ -256,12 +276,13 @@ def main(
 
     print(train_image_paths)
     print(train_label_paths)
+    print(test_label_paths)
 
     train_loader, val_loader = prep_data_loaders(
         train_image_paths,
         train_label_paths,
         train_image_paths,
-        train_label_paths,
+        test_label_paths,
         config,
     )
 
